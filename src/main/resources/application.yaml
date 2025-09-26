@@ -1,0 +1,62 @@
+server:
+  port: 8080
+
+spring:
+  # -----------------------------------------------------------------
+  # 1. Database Configuration (Fix for the ServiceException)
+  # NOTE: Replace 'your_username' and 'your_password' with actual credentials.
+  # -----------------------------------------------------------------
+  datasource:
+    url: jdbc:mysql://localhost:3306/bus_booking_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    username: root  # IMPORTANT: Change this
+    password:   # IMPORTANT: Change this
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # -----------------------------------------------------------------
+  # 2. JPA/Hibernate Configuration
+  # -----------------------------------------------------------------
+  jpa:
+    hibernate:
+      # Automatically execute schema.sql and data.sql on startup
+      ddl-auto: update # 'update' is safe for development; use 'none' for production
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    properties:
+      # CRITICAL: Specifies the dialect for MySQL 8
+      hibernate.dialect: org.hibernate.dialect.MySQLDialect
+    show-sql: true
+    # Load schema.sql and data.sql on startup
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: always
+
+  # -----------------------------------------------------------------
+  # 3. Redis Configuration (For Redisson Distributed Locking)
+  # -----------------------------------------------------------------
+  redis:
+    host: 127.0.0.1
+    port: 6379
+
+  main:
+    allow-circular-references: true
+
+  # -----------------------------------------------------------------
+  # 4. Global Logging Configuration
+  # -----------------------------------------------------------------
+logging:
+  level:
+    root: INFO
+    com.busbooking: DEBUG # DEBUG logs for our custom application code
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG # Shows all executed SQL statements
+
+# -----------------------------------------------------------------
+# 5. OpenAPI/Swagger UI Configuration
+# -----------------------------------------------------------------
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
