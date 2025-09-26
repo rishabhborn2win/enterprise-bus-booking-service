@@ -3,7 +3,11 @@ package com.busbooking.repositories;
 import com.busbooking.entities.BookingSeat;
 import com.busbooking.enums.BookingStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository; /**
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+/**
  * Repository for fetching seat availability and schedule segments.
  */
 @Repository
@@ -18,4 +22,6 @@ public interface BookingSeatRepository extends JpaRepository<BookingSeat, Long> 
      * The concurrency check relies heavily on Redis locking.
      */
     boolean existsBySeatIdAndBooking_Status(Long seatId, BookingStatus status);
+
+    List<BookingSeat> findAllBySeatId(Long seatId);
 }

@@ -229,6 +229,7 @@ public class BookingService {
      * Overlap is defined as any intersection between [reqStartOrder, reqEndOrder) and [bookedStartOrder, bookedEndOrder).
      */
     private boolean isSeatCurrentlyReserved(Long seatId, Long scheduleId, Long startStopId, Long endStopId) {
+        // further optimisation filter the booking seats for expired/cancelled bookings
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Schedule", "id", scheduleId));
         List<ScheduleStop> stops = schedule.getStops();
