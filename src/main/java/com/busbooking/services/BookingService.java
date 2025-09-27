@@ -138,12 +138,12 @@ public class BookingService {
                                 "lock:schedule:%d:seat:%d:segment:%s",
                                 schedule.getId(), seat.getId(), segmentKey);
                 RLock lock = redissonClient.getLock(lockKey);
-                locks.add(lock);
 
                 // Attempt to acquire lock for 10 seconds, and hold it for the booking duration (10
                 // mins)
                 // This ensures Zero Overbooking using an atomic, distributed mechanism.
                 boolean isLocked = lock.tryLock(0, 10, TimeUnit.MINUTES);
+                locks.add(lock);
                 if (!isLocked) {
                     throw new ConcurrencyException(
                             String.format(
@@ -243,6 +243,9 @@ public class BookingService {
                     .limit(1) // Assign 1 seat for simplicity
                     .collect(Collectors.toList());
         } else {
+            if (request.getSeatNumbers().size() > 1) {
+                throw new IllegalArgumentException("Cannot book more than 1 seat in this demo.");
+            }
             // MANUAL SELECTION
             return request.getSeatNumbers().stream()
                     .map(

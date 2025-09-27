@@ -1,6 +1,7 @@
 # Bus System Project: Search, Booking, and Administration Service
 
 This repository contains the backend services for a high-performance Bus Search, Booking, and Administration system. The architecture relies on a crucial **three-layer data strategy** to ensure both speed and transactional integrity.
+Extensible to User Service (but not included here).
 
 | Layer | Technology | Role / Integration |
 | :--- | :--- | :--- |

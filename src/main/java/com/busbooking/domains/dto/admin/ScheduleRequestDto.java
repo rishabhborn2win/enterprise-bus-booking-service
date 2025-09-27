@@ -4,6 +4,7 @@ import com.busbooking.entities.Bus;
 import com.busbooking.entities.Route;
 import com.busbooking.entities.Schedule;
 import com.busbooking.entities.ScheduleStop;
+import com.busbooking.entities.Seat;
 import com.busbooking.entities.Stop;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
@@ -30,6 +31,9 @@ public class ScheduleRequestDto {
 
     @Schema(description = "List of stops and their sequence/timing for this schedule.")
     private List<ScheduleStopDto> stops;
+
+    @Schema(description = "List of seat configurations and pricing for this schedule.")
+    private List<SeatDto> seats; // 🔑 NEW FIELD
 
     /**
      * Converts DTO to the basic Schedule entity. NOTE: Dependent entities (Bus, Route) are stubbed
@@ -99,5 +103,29 @@ public class ScheduleRequestDto {
                 throw new IllegalArgumentException("Arrival time must be strictly increasing.");
             }
         }
+    }
+
+    /**
+     * Converts the nested list of SeatDtos into Seat entities.
+     *
+     * @param schedule The parent Schedule entity to which these seats belong.
+     * @return A list of Seat entities.
+     */
+    public List<Seat> toSeatEntities(Schedule schedule) {
+        if (this.seats == null) {
+            return List.of();
+        }
+
+        return this.seats.stream()
+                .map(
+                        dto -> {
+                            Seat seat = new Seat();
+                            seat.setSchedule(schedule); // Links to the parent schedule
+                            seat.setSeatNumber(dto.getSeatNumber());
+                            seat.setSeatClass(dto.getSeatClass());
+                            seat.setMultiplier(dto.getPriceMultiplier());
+                            return seat;
+                        })
+                .collect(Collectors.toList());
     }
 }

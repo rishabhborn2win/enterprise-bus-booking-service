@@ -38,4 +38,6 @@ public interface BookingSeatRepository extends JpaRepository<BookingSeat, Long> 
                             + "JOIN schedule_stop ss_end ON b.schedule_id = ss_end.schedule_id AND bs.segment_end_stop_id = ss_end.stop_id "
                             + "WHERE b.schedule_id = :scheduleId AND b.status = 'CONFIRMED'")
     List<Object[]> findConfirmedBookedSeatSegmentsWithOrders(Long scheduleId);
+
+    List<BookingSeat> findByBookingId(String id);
 }

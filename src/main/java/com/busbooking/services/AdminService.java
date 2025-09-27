@@ -6,12 +6,14 @@ import com.busbooking.entities.Bus;
 import com.busbooking.entities.Route;
 import com.busbooking.entities.Schedule;
 import com.busbooking.entities.ScheduleStop;
+import com.busbooking.entities.Seat;
 import com.busbooking.entities.Stop;
 import com.busbooking.exceptions.ResourceNotFoundException;
 import com.busbooking.repositories.BusRepository;
 import com.busbooking.repositories.RouteRepository;
 import com.busbooking.repositories.ScheduleRepository;
 import com.busbooking.repositories.ScheduleStopRepository;
+import com.busbooking.repositories.SeatRepository;
 import com.busbooking.repositories.StopRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,6 +32,7 @@ public class AdminService {
     private final RouteRepository routeRepository;
     private final StopRepository stopRepository;
     private final SyncService syncService;
+    private final SeatRepository seatRepository;
 
     // --- 1. BUS Management (CRUD) ---
 
@@ -136,7 +139,8 @@ public class AdminService {
     // --- Core Schedule Creation/Update Logic ---
 
     @Transactional
-    public Schedule createOrUpdateSchedule(Schedule schedule, List<ScheduleStop> stops) {
+    public Schedule createOrUpdateSchedule(
+            Schedule schedule, List<ScheduleStop> stops, List<Seat> seats) {
         // 1. CALCULATE WINDOW & CHECK FOR CONFLICT
         LocalDateTime terminationTime = calculateScheduleTerminationTime(stops);
         LocalDateTime startTime = schedule.getDepartureTime();
@@ -173,19 +177,18 @@ public class AdminService {
                                         new NoSuchElementException(
                                                 "Failed to retrieve schedule after save."));
 
+        // Link new seat entities to the saved schedule and save them
+        seats.forEach(
+                seat -> {
+                    seat.setSchedule(savedSchedule);
+                    // Note: Assumes SeatRequestDto provided basic Seat objects
+                });
+        seatRepository.saveAll(seats);
+
         // 4. TRIGGER IMMEDIATE SYNC to Elasticsearch
         syncService.syncScheduleToElasticsearch(finalSchedule.getId());
 
         return finalSchedule;
-    }
-
-    public void deleteSchedule(Long id) {
-        // Delete ScheduleStops first due to FK constraints (or rely on CascadeType.ALL)
-        scheduleStopRepository.deleteByScheduleId(id);
-        scheduleRepository.deleteById(id);
-
-        // Delete from Elasticsearch as well
-        syncService.deleteScheduleFromElasticsearch(id); // Requires new method in SyncService
     }
 
     // --- NEW: ROUTE Management (Transactional CRUD) ---

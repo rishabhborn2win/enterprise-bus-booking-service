@@ -12,6 +12,7 @@ import com.busbooking.entities.Bus;
 import com.busbooking.entities.Route;
 import com.busbooking.entities.Schedule;
 import com.busbooking.entities.ScheduleStop;
+import com.busbooking.entities.Seat;
 import com.busbooking.entities.Stop;
 import com.busbooking.services.AdminService;
 import com.busbooking.services.SyncService;
@@ -19,6 +20,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,6 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(
         name = "Admin Management",
         description = "Endpoints for managing Buses, Routes, and Schedules (CRUD + Sync)")
+@Slf4j
 public class AdminController {
 
     private final AdminService adminService;
@@ -92,12 +95,16 @@ public class AdminController {
     @PostMapping("/schedule")
     public ResponseEntity<ScheduleResponseDto> addSchedule(
             @RequestBody ScheduleRequestDto request) {
+        log.info("ScheduleRequestDto received: {}", request);
         // Mock DTO to Entity conversion for example
         Schedule newSchedule = request.toScheduleEntity();
         List<ScheduleStop> stops = request.toScheduleStopEntities(newSchedule);
         newSchedule.setStops(stops);
 
-        Schedule savedSchedule = adminService.createOrUpdateSchedule(newSchedule, stops);
+        // Convert nested seat DTOs to entities (NEW STEP)
+        List<Seat> seats = request.toSeatEntities(newSchedule);
+
+        Schedule savedSchedule = adminService.createOrUpdateSchedule(newSchedule, stops, seats);
 
         return ResponseEntity.ok(ScheduleResponseDto.fromEntity(savedSchedule));
     }
