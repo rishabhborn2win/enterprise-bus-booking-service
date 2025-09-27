@@ -39,8 +39,11 @@ spring:
     host: 127.0.0.1
     port: 6379
 
-  main:
-    allow-circular-references: true
+  elasticsearch:
+    client:
+      cloud:
+        id: 3eba915db9ca4d72b2943da2da64bb09
+      api-key: UHN5M2laa0JYYnNWSHBMQllYaHo6RkdLcjRKdXNYN3BfX3dKZ3cwUmdKQQ==
 
   # -----------------------------------------------------------------
   # 4. Global Logging Configuration

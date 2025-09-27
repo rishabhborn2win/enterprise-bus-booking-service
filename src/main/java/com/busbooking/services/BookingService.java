@@ -225,11 +225,9 @@ public class BookingService {
 
     /**
      * Checks if the seat is reserved for any overlapping segment in the same schedule.
-     * Prevents booking if the requested segment overlaps with any confirmed booking for the seat.
-     * Overlap is defined as any intersection between [reqStartOrder, reqEndOrder) and [bookedStartOrder, bookedEndOrder).
+     * Uses an optimised native query to fetch only confirmed seat segments and their stop orders.
      */
     private boolean isSeatCurrentlyReserved(Long seatId, Long scheduleId, Long startStopId, Long endStopId) {
-        // further optimisation filter the booking seats for expired/cancelled bookings
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Schedule", "id", scheduleId));
         List<ScheduleStop> stops = schedule.getStops();
@@ -242,18 +240,20 @@ public class BookingService {
         if (reqStartOrder == null || reqEndOrder == null) {
             throw new IllegalArgumentException("Start or End stop is not part of the route for this schedule.");
         }
-        // For each confirmed booking, check for overlap
-        return bookingRepository.findAll().stream()
-                .filter(b -> b.getSchedule().getId().equals(scheduleId))
-                .flatMap(b -> b.getReservedSeats().stream())
-                .filter(bs -> bs.getSeat().getId().equals(seatId) && (bs.getBooking().getStatus() == BookingStatus.CONFIRMED || bs.getBooking().getStatus() == BookingStatus.PENDING))
-                .anyMatch(bs -> {
-                    Integer bookedStartOrder = stopOrderMap.get(bs.getSegmentStartStop().getId());
-                    Integer bookedEndOrder = stopOrderMap.get(bs.getSegmentEndStop().getId());
-                    if (bookedStartOrder == null || bookedEndOrder == null) return false;
-                    // Overlap: (reqStart < bookedEnd) && (bookedStart < reqEnd)
-                    return reqStartOrder < bookedEndOrder && bookedStartOrder < reqEndOrder;
-                });
+        // Use optimised native query to fetch only confirmed seat segments and their stop orders
+        List<Object[]> bookedSegments = bookingSeatRepository.findConfirmedBookedSeatSegmentsWithOrders(scheduleId);
+        for (Object[] seg : bookedSegments) {
+            Long bookedSeatId = ((Number) seg[0]).longValue();
+            Integer bookedStartOrder = ((Number) seg[1]).intValue();
+            Integer bookedEndOrder = ((Number) seg[2]).intValue();
+            if (bookedSeatId.equals(seatId)) {
+                // Overlap: (reqStart < bookedEnd) && (bookedStart < reqEnd)
+                if (reqStartOrder < bookedEndOrder && bookedStartOrder < reqEndOrder) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 
