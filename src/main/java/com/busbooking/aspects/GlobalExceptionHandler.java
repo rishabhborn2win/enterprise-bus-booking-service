@@ -80,12 +80,21 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    /** Handles custom PaymentFailureException (500 Internal Server Error/400 Bad Request). */
+    /** Handles custom IllegalArgumentException (400 Bad Request). */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Object> handlePaymentFailureException(
             IllegalArgumentException ex, WebRequest request) {
         Map<String, Object> body = getErrorBody(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
         log.error("IllegalArgumentException: {}", ex.getMessage());
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    /** Handles custom PaymentFailureException (500 Internal Server Error/400 Bad Request). */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Object> handleIllegalStateException(
+            IllegalStateException ex, WebRequest request) {
+        Map<String, Object> body = getErrorBody(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+        log.error("IllegalStateException: {}", ex.getMessage());
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 

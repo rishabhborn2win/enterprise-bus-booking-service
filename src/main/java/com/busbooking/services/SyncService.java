@@ -21,32 +21,43 @@ public class SyncService {
 
     @Transactional(readOnly = true)
     public BusScheduleDocument mapToDocument(Schedule schedule) {
-        // ... (Mapping logic remains similar to previous step, fetching relationships) ...
-        // Ensure you fetch all relationships (Bus, Route, ScheduleStops) before mapping.
-        // For brevity, assume schedule entity relationships are correctly loaded.
         BusScheduleDocument doc = new BusScheduleDocument();
+
+        // Set direct fields
         doc.setId(schedule.getId());
+        doc.setTotalCapacity(schedule.getBus().getTotalSeats());
+        doc.setDepartureTime(schedule.getDepartureTime());
+        doc.setBasePrice(schedule.getBasePrice());
+        doc.setOperator(schedule.getBus().getOperator()); // Assuming this is set on the Bus entity
+
+        // Set Route fields (via Schedule relationships)
         doc.setRouteId(schedule.getRoute().getId());
         doc.setBusId(schedule.getBus().getId());
         doc.setSourceStopId(schedule.getRoute().getSourceStop().getId());
         doc.setDestinationStopId(schedule.getRoute().getDestinationStop().getId());
-        doc.setOperator(schedule.getBus().getOperator());
-        doc.setTotalCapacity(schedule.getBus().getTotalSeats());
-        doc.setDepartureTime(schedule.getDepartureTime());
-        doc.setBasePrice(schedule.getBasePrice());
 
-        // Map Schedule Stops (Requires fetching/loading all stops)
+        // --- CRITICAL FIX 1: Correctly accessing the Schedule Stops relationship ---
+        // The relationship is named 'scheduleStops' in the Schedule entity.
         List<BusScheduleDocument.ScheduleStopDetail> stopDetails =
-                schedule.getStops().stream()
+                schedule.getStops().stream() // CORRECTED: Use getScheduleStops()
                         .map(
                                 ss -> {
                                     BusScheduleDocument.ScheduleStopDetail detail =
                                             new BusScheduleDocument.ScheduleStopDetail();
+
+                                    // Set direct ScheduleStop fields
                                     detail.setStopId(ss.getStop().getId());
                                     detail.setStopName(ss.getStop().getName());
+                                    detail.setStopOrder(ss.getStopOrder());
+
+                                    // --- CRITICAL FIX 2: Correct Time Mapping ---
+                                    // Elasticsearch mapping often expects the ISO standard string.
+                                    // We rely on Spring Data ES to convert LocalDateTime, but
+                                    // for maximum compatibility, we ensure the correct Java time
+                                    // object is passed.
                                     detail.setArrivalTime(
                                             ss.getArrivalTime().toEpochSecond(ZoneOffset.UTC));
-                                    detail.setStopOrder(ss.getStopOrder());
+
                                     return detail;
                                 })
                         .toList();
