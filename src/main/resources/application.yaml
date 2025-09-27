@@ -1,81 +1,84 @@
+# ===================================================================
+# SERVER CONFIGURATION
+# ===================================================================
 server:
-  port: 8080
+  port: 8080 # The port where the application will run.
 
+# ===================================================================
+# SPRING BOOT CORE CONFIGURATION
+# ===================================================================
 spring:
   # -----------------------------------------------------------------
-  # 1. Database Configuration (Fix for the ServiceException)
-  # NOTE: Replace 'your_username' and 'your_password' with actual credentials.
+  # DATABASE CONNECTION
   # -----------------------------------------------------------------
   datasource:
     url: jdbc:mysql://localhost:3306/bus_booking_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
-    username: root  # IMPORTANT: Change this
-    password:   # IMPORTANT: Change this
+    username: root  # IMPORTANT: Use environment variables or a secrets manager in production.
+    password:   # IMPORTANT: Use environment variables or a secrets manager in production.
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   # -----------------------------------------------------------------
-  # 2. JPA/Hibernate Configuration
+  # JPA & HIBERNATE CONFIGURATION
   # -----------------------------------------------------------------
   jpa:
     hibernate:
-      # Automatically execute schema.sql and data.sql on startup
-      ddl-auto: update # 'update' is safe for development; use 'none' for production
+      # DDL (Data Definition Language) auto-generation strategy.
+      # 'update': Modifies the database schema on startup. Safe for development.
+      # 'validate': Validates the schema, makes no changes.
+      # 'none': Recommended for production. Schema managed via migration tools (e.g., Flyway, Liquibase).
+      ddl-auto: update
       naming:
+        # Use standard naming strategy for physical tables and columns.
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
-      # CRITICAL: Specifies the dialect for MySQL 8
+      # Specifies the SQL dialect for MySQL 8, ensuring Hibernate generates compatible SQL.
       hibernate.dialect: org.hibernate.dialect.MySQLDialect
+    # Logs executed SQL statements to the console. Useful for debugging.
     show-sql: true
-    # Load schema.sql and data.sql on startup
+    # Defers database initialization until after Hibernate has initialized.
     defer-datasource-initialization: true
 
+  # -----------------------------------------------------------------
+  # DATABASE INITIALIZATION
+  # -----------------------------------------------------------------
   sql:
     init:
+      # 'always': Always run schema.sql and data.sql on startup.
+      # 'embedded': Only run for embedded databases (like H2).
+      # 'never': Disable SQL script initialization.
       mode: always
 
   # -----------------------------------------------------------------
-  # 3. Redis Configuration (For Redisson Distributed Locking)
+  # REDIS CONFIGURATION (for Distributed Locking with Redisson)
   # -----------------------------------------------------------------
   redis:
     host: 127.0.0.1
     port: 6379
 
-  elasticsearch:
-    client:
-      cloud:
-        id: 4c722c35bf4d4e6d93c82ebbe227fa50:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyQzZWJhOTE1ZGI5Y2E0ZDcyYjI5NDNkYTJkYTY0YmIwOSQyNzgzYzFjNGZmNzU0MTM3YWNmMmIyODBhMjM2ODk2NQ==
-      api-key: UHN5M2laa0JYYnNWSHBMQllYaHo6RkdLcjRKdXNYN3BfX3dKZ3cwUmdKQQ==
-      protocol: https
-    connection-timeout: 10s
-    rest:
-      uris: https://3eba915db9ca4d72b2943da2da64bb09.us-central1.gcp.cloud.es.io:443
-
+# ===================================================================
+# ELASTICSEARCH CONFIGURATION
+# ===================================================================
 es:
-  cloud.id: 4c722c35bf4d4e6d93c82ebbe227fa50:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyQzZWJhOTE1ZGI5Y2E0ZDcyYjI5NDNkYTJkYTY0YmIwOSQyNzgzYzFjNGZmNzU0MTM3YWNmMmIyODBhMjM2ODk2NQ==
-  api-key: UHN5M2laa0JYYnNWSHBMQllYaHo6RkdLcjRKdXNYN3BfX3dKZ3cwUmdKQQ==
+  cloud.id: 3eba915db9ca4d72b2943da2da64bb09.us-central1.gcp.cloud.es.io:443
+  api-key: UHN5M2laa0JYYnNWSHBMQllYaHo6RkdLcjRKdXNYN3BfX3dKZ3cwUmdKQQ== # WARNING: Hardcoded for development. Use a secrets manager in production.
 
-
-  # -----------------------------------------------------------------
-  # 4. Global Logging Configuration
-  # -----------------------------------------------------------------
+# ===================================================================
+# LOGGING CONFIGURATION
+# ===================================================================
 logging:
   level:
-    root: INFO
-    com.busbooking: DEBUG # DEBUG logs for our custom application code
-    org.springframework.web: INFO
-    org.hibernate.SQL: DEBUG # Shows all executed SQL statements
-    org:
-      springframework:
-        data:
-          elasticsearch: DEBUG # DEBUG logs for Elasticsearch operations
-      elasticsearch:
-        client:
-          RestClient: TRACE
+    root: INFO # Default logging level for the entire application.
+    com.busbooking: DEBUG # Enables detailed DEBUG logs for application-specific code.
+    org.springframework.web: INFO # Reduces noise from the web layer.
+    org.hibernate.SQL: DEBUG # Logs all SQL statements executed by Hibernate.
+    org.springframework.data.elasticsearch: DEBUG # Detailed logs for Elasticsearch operations.
+    org.elasticsearch.client.RestClient: TRACE # Verbose logs for the Elasticsearch REST client, useful for deep debugging.
 
-# -----------------------------------------------------------------
-# 5. OpenAPI/Swagger UI Configuration
-# -----------------------------------------------------------------
+# ===================================================================
+# API DOCUMENTATION (OpenAPI/Swagger)
+# ===================================================================
 springdoc:
   swagger-ui:
-    path: /swagger-ui.html
+    path: /swagger-ui.html # The path to access the Swagger UI.
   api-docs:
-    path: /v3/api-docs
+    path: /v3/api-docs # The path for the OpenAPI 3.0 specification.

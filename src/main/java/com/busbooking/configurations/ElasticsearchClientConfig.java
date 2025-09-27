@@ -24,7 +24,7 @@ public class ElasticsearchClientConfig extends ElasticsearchConfiguration {
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "ApiKey " + apiKey);
         return ClientConfiguration.builder()
-                .connectedTo("3eba915db9ca4d72b2943da2da64bb09.us-central1.gcp.cloud.es.io:443")
+                .connectedTo(cloudId)
                 .usingSsl()
                 .withDefaultHeaders(headers)
                 .withConnectTimeout(Duration.ofSeconds(15))

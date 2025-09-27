@@ -4,12 +4,17 @@ import com.busbooking.entities.Bus;
 import com.busbooking.entities.Route;
 import com.busbooking.entities.Schedule;
 import com.busbooking.entities.ScheduleStop;
+import com.busbooking.exceptions.ResourceNotFoundException;
 import com.busbooking.repositories.BusRepository;
 import com.busbooking.repositories.RouteRepository;
 import com.busbooking.repositories.ScheduleRepository;
 import com.busbooking.repositories.ScheduleStopRepository;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,7 +53,7 @@ public class AdminService {
         return routeRepository.save(route);
     }
 
-    public Route updateRoute(Integer id, Route routeDetails) {
+    public Route updateRoute(Long id, Route routeDetails) {
         Route route =
                 routeRepository
                         .findById(id)
@@ -73,41 +78,60 @@ public class AdminService {
      */
     @Transactional // Ensures atomicity for Schedule and ScheduleStop tables
     public Schedule createOrUpdateSchedule(Schedule schedule, List<ScheduleStop> stops) {
-
-        // 1. Save/Update Schedule
-        Schedule savedSchedule = scheduleRepository.save(schedule);
-
-        // 2. Handle Schedule Stops
-
-        // **If updating, delete old stops first to manage the unique key (schedule_id,
-        // stop_order)**
-        if (schedule.getId() != null) {
-            scheduleStopRepository.deleteByScheduleId(schedule.getId());
+        // --- VALIDATION ---
+        if (schedule.getBus() == null || schedule.getBus().getId() == null) {
+            throw new IllegalArgumentException("Schedule must be associated with a bus.");
+        }
+        if (schedule.getRoute() == null || schedule.getRoute().getId() == null) {
+            throw new IllegalArgumentException("Schedule must be associated with a route.");
+        }
+        if (schedule.getBasePrice() == null || schedule.getBasePrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Base price must be positive.");
+        }
+        if (stops == null || stops.isEmpty()) {
+            throw new IllegalArgumentException("Schedule must have at least one stop.");
         }
 
-        // **Associate new stops with the saved schedule and save them**
-        stops.forEach(
-                stop -> {
-                    stop.setSchedule(savedSchedule); // Link back to the parent schedule
-                    // Note: Stop entity must be managed or correctly referenced before saving
-                });
+        // Validate stop order uniqueness and sequence
+        Set<Integer> stopOrders = new HashSet<>();
+        for (ScheduleStop stop : stops) {
+            if (!stopOrders.add(stop.getStopOrder())) {
+                throw new IllegalArgumentException("Duplicate stop order found: " + stop.getStopOrder());
+            }
+        }
+
+        // --- OVERLAP VALIDATION ---
+        Route route = routeRepository.findById(schedule.getRoute().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Route", "id", schedule.getRoute().getId()));
+
+        LocalDateTime startTime = schedule.getDepartureTime();
+        LocalDateTime endTime = schedule.getStops().stream()
+                .filter(s -> s.getStopOrder().equals(stops.size())) // Last stop
+                .findFirst()
+                .map(ScheduleStop::getArrivalTime)
+                .orElseThrow();
+        Long scheduleIdToExclude = schedule.getId() != null ? schedule.getId() : -1L; // Exclude self if updating
+
+        //ToDo: @rishabh.mishra Add a validation to make sure no overlapping schedule for same bus
+        List<Schedule> overlappingSchedules = null;
+
+        if (!overlappingSchedules.isEmpty()) {
+            throw new IllegalStateException("Bus is already scheduled for an overlapping time period.");
+        }
+
+        // --- PERSISTENCE ---
+        Schedule savedSchedule = scheduleRepository.save(schedule);
+
+        if (savedSchedule.getId() != null && !savedSchedule.getId().equals(schedule.getId())) {
+            scheduleStopRepository.deleteByScheduleId(savedSchedule.getId());
+        }
+
+        stops.forEach(stop -> stop.setSchedule(savedSchedule));
         scheduleStopRepository.saveAll(stops);
 
-        // Important: Re-fetch the schedule with its newly created stops collection
-        // This is often needed if the JPA session is complex.
-        Schedule finalSchedule =
-                scheduleRepository
-                        .findById(savedSchedule.getId())
-                        .orElseThrow(
-                                () ->
-                                        new NoSuchElementException(
-                                                "Failed to retrieve schedule after save."));
+        syncService.syncScheduleToElasticsearch(savedSchedule.getId());
 
-        // 3. Trigger Immediate Sync to Elasticsearch
-        // This ensures the search index reflects the new schedule data instantly.
-        syncService.syncScheduleToElasticsearch(finalSchedule.getId());
-
-        return finalSchedule;
+        return savedSchedule;
     }
 
     public void deleteSchedule(Long id) {
