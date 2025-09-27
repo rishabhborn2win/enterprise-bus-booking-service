@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BookingCleanupScheduler {
 
     private final BookingRepository bookingRepository;
+
     // In a real service, the seat release would involve sending a message to the Search/Inventory
     // service
     // or deleting the Redis lock/cache entry for the seat.

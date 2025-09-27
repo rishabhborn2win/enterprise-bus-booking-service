@@ -85,7 +85,8 @@ public class AdminService {
         if (schedule.getRoute() == null || schedule.getRoute().getId() == null) {
             throw new IllegalArgumentException("Schedule must be associated with a route.");
         }
-        if (schedule.getBasePrice() == null || schedule.getBasePrice().compareTo(BigDecimal.ZERO) <= 0) {
+        if (schedule.getBasePrice() == null
+                || schedule.getBasePrice().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Base price must be positive.");
         }
         if (stops == null || stops.isEmpty()) {
@@ -96,27 +97,36 @@ public class AdminService {
         Set<Integer> stopOrders = new HashSet<>();
         for (ScheduleStop stop : stops) {
             if (!stopOrders.add(stop.getStopOrder())) {
-                throw new IllegalArgumentException("Duplicate stop order found: " + stop.getStopOrder());
+                throw new IllegalArgumentException(
+                        "Duplicate stop order found: " + stop.getStopOrder());
             }
         }
 
         // --- OVERLAP VALIDATION ---
-        Route route = routeRepository.findById(schedule.getRoute().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Route", "id", schedule.getRoute().getId()));
+        Route route =
+                routeRepository
+                        .findById(schedule.getRoute().getId())
+                        .orElseThrow(
+                                () ->
+                                        new ResourceNotFoundException(
+                                                "Route", "id", schedule.getRoute().getId()));
 
         LocalDateTime startTime = schedule.getDepartureTime();
-        LocalDateTime endTime = schedule.getStops().stream()
-                .filter(s -> s.getStopOrder().equals(stops.size())) // Last stop
-                .findFirst()
-                .map(ScheduleStop::getArrivalTime)
-                .orElseThrow();
-        Long scheduleIdToExclude = schedule.getId() != null ? schedule.getId() : -1L; // Exclude self if updating
+        LocalDateTime endTime =
+                schedule.getStops().stream()
+                        .filter(s -> s.getStopOrder().equals(stops.size())) // Last stop
+                        .findFirst()
+                        .map(ScheduleStop::getArrivalTime)
+                        .orElseThrow();
+        Long scheduleIdToExclude =
+                schedule.getId() != null ? schedule.getId() : -1L; // Exclude self if updating
 
-        //ToDo: @rishabh.mishra Add a validation to make sure no overlapping schedule for same bus
+        // ToDo: @rishabh.mishra Add a validation to make sure no overlapping schedule for same bus
         List<Schedule> overlappingSchedules = null;
 
         if (!overlappingSchedules.isEmpty()) {
-            throw new IllegalStateException("Bus is already scheduled for an overlapping time period.");
+            throw new IllegalStateException(
+                    "Bus is already scheduled for an overlapping time period.");
         }
 
         // --- PERSISTENCE ---

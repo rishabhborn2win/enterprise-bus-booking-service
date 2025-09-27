@@ -12,7 +12,7 @@ spring:
   # DATABASE CONNECTION
   # -----------------------------------------------------------------
   datasource:
-    url: jdbc:mysql://localhost:3306/bus_booking_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/bus_system_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
     username: root  # IMPORTANT: Use environment variables or a secrets manager in production.
     password:   # IMPORTANT: Use environment variables or a secrets manager in production.
     driver-class-name: com.mysql.cj.jdbc.Driver
