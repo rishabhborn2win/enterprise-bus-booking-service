@@ -1,14 +1,10 @@
 package com.busbooking.entities;
 
 import jakarta.persistence.*;
+import java.util.Set;
 import lombok.*;
 
-import java.util.Set;
-
-/**
- * Entity for the physical bus vehicle.
- * Maps to the BUS table.
- */
+/** Entity for the physical bus vehicle. Maps to the BUS table. */
 @Entity
 @Table(name = "bus")
 @Data
@@ -33,4 +29,3 @@ public class Bus {
     @OneToMany(mappedBy = "bus", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Schedule> schedules;
 }
-

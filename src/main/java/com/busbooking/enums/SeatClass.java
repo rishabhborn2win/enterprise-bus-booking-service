@@ -1,8 +1,8 @@
 package com.busbooking.enums;
 
-import lombok.Getter; /**
- * Defines the various seat classes with their base pricing multipliers.
- */
+import lombok.Getter;
+
+/** Defines the various seat classes with their base pricing multipliers. */
 @Getter
 public enum SeatClass {
     SEATING(1.0),

@@ -1,18 +1,13 @@
 package com.busbooking.domains.dto;
 
-import com.busbooking.enums.BookingStatus;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 import lombok.Data;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-
 /**
- * DTO for the initial seat reservation request.
- * Includes Jakarta Bean Validation for input quality.
+ * DTO for the initial seat reservation request. Includes Jakarta Bean Validation for input quality.
  */
 @Data
 public class BookingRequest {
@@ -35,4 +30,3 @@ public class BookingRequest {
 
     private List<Integer> addonIds; // Optional addons (Extra luggage, meal, etc.)
 }
-

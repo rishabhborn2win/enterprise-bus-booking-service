@@ -2,16 +2,18 @@ package com.busbooking.strategies;
 
 import com.busbooking.entities.Booking;
 import com.busbooking.entities.Seat;
-
 import java.math.BigDecimal;
-import java.util.List; /**
- * Strategy Pattern Implementation: Dynamic Pricing Engine.
- * Adds a demand factor (1.0x to 1.5x) based on current availability.
+import java.util.List;
+
+/**
+ * Strategy Pattern Implementation: Dynamic Pricing Engine. Adds a demand factor (1.0x to 1.5x)
+ * based on current availability.
  */
 public class DynamicPriceStrategy implements PricingStrategy {
 
     private final int totalSeats;
-    private final int reservedSeats; // This would come from a real-time inventory service (Search Service)
+    private final int
+            reservedSeats; // This would come from a real-time inventory service (Search Service)
 
     public DynamicPriceStrategy(int totalSeats, int reservedSeats) {
         this.totalSeats = totalSeats;
@@ -30,7 +32,8 @@ public class DynamicPriceStrategy implements PricingStrategy {
         // Max factor of 1.5 is hit when soldPercentage is 1.0 (fully booked)
         double demandFactor = 1.0 + (0.5 * soldPercentage);
 
-        return fixedPrice.multiply(BigDecimal.valueOf(demandFactor))
-                         .setScale(2, BigDecimal.ROUND_HALF_UP);
+        return fixedPrice
+                .multiply(BigDecimal.valueOf(demandFactor))
+                .setScale(2, BigDecimal.ROUND_HALF_UP);
     }
 }

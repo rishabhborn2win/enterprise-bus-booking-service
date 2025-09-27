@@ -8,12 +8,11 @@ import com.busbooking.repositories.BusRepository;
 import com.busbooking.repositories.RouteRepository;
 import com.busbooking.repositories.ScheduleRepository;
 import com.busbooking.repositories.ScheduleStopRepository;
+import java.util.List;
+import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -31,8 +30,11 @@ public class AdminService {
     }
 
     public Bus updateBus(Long id, Bus busDetails) {
-        Bus bus = busRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Bus not found with ID: " + id));
+        Bus bus =
+                busRepository
+                        .findById(id)
+                        .orElseThrow(
+                                () -> new NoSuchElementException("Bus not found with ID: " + id));
 
         bus.setOperator(busDetails.getOperator());
         bus.setTotalSeats(busDetails.getTotalSeats());
@@ -47,8 +49,11 @@ public class AdminService {
     }
 
     public Route updateRoute(Integer id, Route routeDetails) {
-        Route route = routeRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Route not found with ID: " + id));
+        Route route =
+                routeRepository
+                        .findById(id)
+                        .orElseThrow(
+                                () -> new NoSuchElementException("Route not found with ID: " + id));
 
         // Update distance and possibly source/dest stops (complex update logic omitted)
         route.setDistanceKm(routeDetails.getDistanceKm());
@@ -59,8 +64,9 @@ public class AdminService {
     // --- 3. SCHEDULE Management (CRUD + Sync) ---
 
     /**
-     * Creates a new Schedule or modifies an existing one, and ensures stop consistency.
-     * Triggers an immediate synchronization to Elasticsearch upon successful commit.
+     * Creates a new Schedule or modifies an existing one, and ensures stop consistency. Triggers an
+     * immediate synchronization to Elasticsearch upon successful commit.
+     *
      * @param schedule The Schedule entity (new or existing)
      * @param stops The complete list of ScheduleStop entities for this schedule
      * @return The saved Schedule entity
@@ -73,22 +79,29 @@ public class AdminService {
 
         // 2. Handle Schedule Stops
 
-        // **If updating, delete old stops first to manage the unique key (schedule_id, stop_order)**
+        // **If updating, delete old stops first to manage the unique key (schedule_id,
+        // stop_order)**
         if (schedule.getId() != null) {
             scheduleStopRepository.deleteByScheduleId(schedule.getId());
         }
 
         // **Associate new stops with the saved schedule and save them**
-        stops.forEach(stop -> {
-            stop.setSchedule(savedSchedule); // Link back to the parent schedule
-            // Note: Stop entity must be managed or correctly referenced before saving
-        });
+        stops.forEach(
+                stop -> {
+                    stop.setSchedule(savedSchedule); // Link back to the parent schedule
+                    // Note: Stop entity must be managed or correctly referenced before saving
+                });
         scheduleStopRepository.saveAll(stops);
 
         // Important: Re-fetch the schedule with its newly created stops collection
         // This is often needed if the JPA session is complex.
-        Schedule finalSchedule = scheduleRepository.findById(savedSchedule.getId())
-                .orElseThrow(() -> new NoSuchElementException("Failed to retrieve schedule after save."));
+        Schedule finalSchedule =
+                scheduleRepository
+                        .findById(savedSchedule.getId())
+                        .orElseThrow(
+                                () ->
+                                        new NoSuchElementException(
+                                                "Failed to retrieve schedule after save."));
 
         // 3. Trigger Immediate Sync to Elasticsearch
         // This ensures the search index reflects the new schedule data instantly.

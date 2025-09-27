@@ -2,9 +2,7 @@ package com.busbooking.components;
 
 import java.math.BigDecimal;
 
-/**
- * Decorator Pattern: Decorator Abstract Class
- */
+/** Decorator Pattern: Decorator Abstract Class */
 abstract class AddonDecorator implements BookingComponent {
     protected BookingComponent wrappee;
 

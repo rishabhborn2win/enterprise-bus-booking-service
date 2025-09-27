@@ -12,18 +12,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import java.math.BigDecimal;
-
-/**
- * Entity for individual seats belonging to a schedule.
- * Maps to the SEAT table.
- */
+/** Entity for individual seats belonging to a schedule. Maps to the SEAT table. */
 @Entity
 @Table(name = "seat")
 @Data

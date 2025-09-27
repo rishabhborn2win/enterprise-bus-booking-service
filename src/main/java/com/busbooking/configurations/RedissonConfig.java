@@ -7,9 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Configuration for Redisson, the Redis client used for Distributed Locking.
- */
+/** Configuration for Redisson, the Redis client used for Distributed Locking. */
 @Configuration
 public class RedissonConfig {
 
@@ -20,9 +18,10 @@ public class RedissonConfig {
     private String redisPort;
 
     /**
-     * Creates and configures the RedissonClient bean.
-     * This client is used by the BookingService to acquire and manage distributed locks,
-     * ensuring Zero Overbooking in a clustered/microservice environment.
+     * Creates and configures the RedissonClient bean. This client is used by the BookingService to
+     * acquire and manage distributed locks, ensuring Zero Overbooking in a clustered/microservice
+     * environment.
+     *
      * @return A configured RedissonClient instance.
      */
     @Bean(destroyMethod = "shutdown")

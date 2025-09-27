@@ -7,27 +7,32 @@ import com.busbooking.components.MealDecorator;
 import com.busbooking.components.PriorityBoardingDecorator;
 import com.busbooking.domains.dto.BookingRequest;
 import com.busbooking.domains.dto.BookingResponse;
+import com.busbooking.entities.Addon;
+import com.busbooking.entities.Booking;
+import com.busbooking.entities.BookingSeat;
+import com.busbooking.entities.Schedule;
 import com.busbooking.entities.ScheduleStop;
+import com.busbooking.entities.Seat;
+import com.busbooking.entities.Stop;
+import com.busbooking.enums.BookingStatus;
 import com.busbooking.exceptions.ConcurrencyException;
 import com.busbooking.exceptions.PaymentFailureException;
 import com.busbooking.exceptions.ResourceNotFoundException;
 import com.busbooking.exceptions.SeatUnavailableException;
+import com.busbooking.repositories.AddonRepository;
 import com.busbooking.repositories.BookingRepository;
 import com.busbooking.repositories.BookingSeatRepository;
-import com.busbooking.repositories.SeatRepository;
 import com.busbooking.repositories.ScheduleRepository;
+import com.busbooking.repositories.SeatRepository;
 import com.busbooking.repositories.StopRepository;
-import com.busbooking.repositories.AddonRepository;
-import com.busbooking.entities.Booking;
-import com.busbooking.entities.Seat;
-import com.busbooking.entities.Schedule;
-import com.busbooking.entities.Stop;
-import com.busbooking.entities.Addon;
-import com.busbooking.entities.BookingSeat;
-import com.busbooking.enums.BookingStatus;
 import com.busbooking.strategies.DynamicPriceStrategy;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -35,15 +40,9 @@ import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
 /**
- * Service Layer Pattern: Encapsulates all core business logic for the booking lifecycle.
- * Focuses on Concurrency Control and Multi-hop inventory management.
+ * Service Layer Pattern: Encapsulates all core business logic for the booking lifecycle. Focuses on
+ * Concurrency Control and Multi-hop inventory management.
  */
 @Service
 @RequiredArgsConstructor
@@ -60,10 +59,10 @@ public class BookingService {
     private final DynamicPriceStrategy dynamicPricingStrategy; // Injected from Controller @Bean
     @PersistenceContext private EntityManager entityManager;
 
-
     /**
-     * API: Reserves seats, creates a PENDING booking, and applies a distributed lock.
-     * CRITICAL: Prevents overbooking using Redis locks with a timeout.
+     * API: Reserves seats, creates a PENDING booking, and applies a distributed lock. CRITICAL:
+     * Prevents overbooking using Redis locks with a timeout.
+     *
      * @param request The BookingRequest DTO.
      * @return BookingResponse with PENDING status and expiration time.
      */
@@ -72,12 +71,27 @@ public class BookingService {
         log.info("Attempting to reserve seats for Schedule ID: {}", request.getScheduleId());
 
         // 1. Data Validation & Fetching
-        Schedule schedule = scheduleRepository.findById(request.getScheduleId())
-                .orElseThrow(() -> new ResourceNotFoundException("Schedule", "id", request.getScheduleId()));
-        Stop startStop = stopRepository.findById(request.getStartStopId())
-                .orElseThrow(() -> new ResourceNotFoundException("Stop", "id", request.getStartStopId()));
-        Stop endStop = stopRepository.findById(request.getEndStopId())
-                .orElseThrow(() -> new ResourceNotFoundException("Stop", "id", request.getEndStopId()));
+        Schedule schedule =
+                scheduleRepository
+                        .findById(request.getScheduleId())
+                        .orElseThrow(
+                                () ->
+                                        new ResourceNotFoundException(
+                                                "Schedule", "id", request.getScheduleId()));
+        Stop startStop =
+                stopRepository
+                        .findById(request.getStartStopId())
+                        .orElseThrow(
+                                () ->
+                                        new ResourceNotFoundException(
+                                                "Stop", "id", request.getStartStopId()));
+        Stop endStop =
+                stopRepository
+                        .findById(request.getEndStopId())
+                        .orElseThrow(
+                                () ->
+                                        new ResourceNotFoundException(
+                                                "Stop", "id", request.getEndStopId()));
         List<Seat> allSeats = seatRepository.findByScheduleId(request.getScheduleId());
 
         if (startStop.getId().equals(endStop.getId())) {
@@ -100,10 +114,12 @@ public class BookingService {
             }
         }
         if (startOrder == null || endOrder == null) {
-            throw new IllegalArgumentException("Start or End stop is not part of the route for this schedule.");
+            throw new IllegalArgumentException(
+                    "Start or End stop is not part of the route for this schedule.");
         }
         if (startOrder >= endOrder) {
-            throw new IllegalArgumentException("Start stop must come before end stop in the route order.");
+            throw new IllegalArgumentException(
+                    "Start stop must come before end stop in the route order.");
         }
 
         // 2. Seat Selection & Locking Preparation
@@ -117,19 +133,26 @@ public class BookingService {
             // Acquire locks for each selected seat on the specific segment
             for (Seat seat : seatsToReserve) {
                 // Lock Key: lock:scheduleId:10001:seat:A5:segment:17-18
-                String lockKey = String.format("lock:schedule:%d:seat:%d:segment:%s",
-                        schedule.getId(), seat.getId(), segmentKey);
+                String lockKey =
+                        String.format(
+                                "lock:schedule:%d:seat:%d:segment:%s",
+                                schedule.getId(), seat.getId(), segmentKey);
                 RLock lock = redissonClient.getLock(lockKey);
+                locks.add(lock);
 
-                // Attempt to acquire lock for 10 seconds, and hold it for the booking duration (10 mins)
+                // Attempt to acquire lock for 10 seconds, and hold it for the booking duration (10
+                // mins)
                 // This ensures Zero Overbooking using an atomic, distributed mechanism.
                 boolean isLocked = lock.tryLock(0, 10, TimeUnit.MINUTES);
                 if (!isLocked) {
-                    throw new ConcurrencyException(String.format("Seat %s is currently reserved or locked by another user.", seat.getSeatNumber()));
+                    throw new ConcurrencyException(
+                            String.format(
+                                    "Seat %s is currently reserved or locked by another user.",
+                                    seat.getSeatNumber()));
                 }
-                locks.add(lock);
             }
-            log.info("Successfully acquired distributed locks for {} seats.", seatsToReserve.size());
+            log.info(
+                    "Successfully acquired distributed locks for {} seats.", seatsToReserve.size());
 
             // 3. Create PENDING Booking (MySQL Transaction)
             Booking booking = new Booking();
@@ -146,9 +169,11 @@ public class BookingService {
             BigDecimal basePrice = dynamicPricingStrategy.calculatePrice(booking, seatsToReserve);
 
             // Fetch Addons
-            Set<Addon> addons = request.getAddonIds() != null
-                    ? addonRepository.findAllById(request.getAddonIds()).stream().collect(Collectors.toSet())
-                    : new HashSet<>();
+            Set<Addon> addons =
+                    request.getAddonIds() != null
+                            ? addonRepository.findAllById(request.getAddonIds()).stream()
+                                    .collect(Collectors.toSet())
+                            : new HashSet<>();
             booking.setAddons(addons);
 
             // Apply Decorator Pattern for Addon pricing
@@ -167,69 +192,96 @@ public class BookingService {
             // 5. Save Booking and Reserved Seats
             Booking savedBooking = bookingRepository.save(booking);
 
-            seatsToReserve.forEach(seat -> {
-                BookingSeat bs = new BookingSeat();
-                bs.setBooking(savedBooking);
-                bs.setSeat(seat);
-                bs.setSegmentStartStop(startStop);
-                bs.setSegmentEndStop(endStop);
-                savedBooking.getReservedSeats().add(bs);
-            });
+            seatsToReserve.forEach(
+                    seat -> {
+                        BookingSeat bs = new BookingSeat();
+                        bs.setBooking(savedBooking);
+                        bs.setSeat(seat);
+                        bs.setSegmentStartStop(startStop);
+                        bs.setSegmentEndStop(endStop);
+                        savedBooking.getReservedSeats().add(bs);
+                    });
 
             // Re-save to persist BookingSeat relations
             bookingRepository.saveAndFlush(savedBooking);
 
-            log.info("Booking ID {} successfully created with PENDING status. Price: {}", savedBooking.getId(), savedBooking.getFinalPrice());
+            log.info(
+                    "Booking ID {} successfully created with PENDING status. Price: {}",
+                    savedBooking.getId(),
+                    savedBooking.getFinalPrice());
             return mapToResponse(savedBooking);
 
         } catch (InterruptedException e) {
-            log.error("Reservation failed due to interrupted thread (lock failure): {}", e.getMessage());
+            log.error(
+                    "Reservation failed due to interrupted thread (lock failure): {}",
+                    e.getMessage());
             // Release all acquired locks on failure
             locks.forEach(RLock::unlock);
             // Throw a ConcurrencyException to ensure transaction rollback
             throw new ConcurrencyException("Reservation failed due to system concurrency issue.");
         } catch (RuntimeException e) {
-            // Ensure locks are released even on other runtime failures (e.g., DB error, SeatUnavailableException)
+            // Ensure locks are released even on other runtime failures (e.g., DB error,
+            // SeatUnavailableException)
             locks.forEach(RLock::unlock);
             throw e; // Re-throw to trigger transaction rollback
         }
     }
 
-    /**
-     * Helper to determine seats for reservation, falling back to auto-assignment.
-     */
+    /** Helper to determine seats for reservation, falling back to auto-assignment. */
     private List<Seat> selectSeats(BookingRequest request, List<Seat> allSeats) {
         if (request.getSeatNumbers() == null || request.getSeatNumbers().isEmpty()) {
             log.info("No seats manually selected. Performing intelligent auto-assignment.");
             // INTELLIGENT AUTO-ASSIGNMENT FALLBACK: Simple logic - assign first available seats
             return allSeats.stream()
-                    .filter(seat -> !isSeatCurrentlyReserved(seat.getId(), seat.getSchedule().getId(), request.getStartStopId(), request.getEndStopId()))
+                    .filter(
+                            seat ->
+                                    !isSeatCurrentlyReserved(
+                                            seat.getId(),
+                                            seat.getSchedule().getId(),
+                                            request.getStartStopId(),
+                                            request.getEndStopId()))
                     .limit(1) // Assign 1 seat for simplicity
                     .collect(Collectors.toList());
         } else {
             // MANUAL SELECTION
             return request.getSeatNumbers().stream()
-                    .map(seatNum -> allSeats.stream()
-                            .filter(s -> s.getSeatNumber().equals(seatNum))
-                            .findFirst()
-                            .orElseThrow(() -> new ResourceNotFoundException("Seat", "number", seatNum))
-                    )
-                    .peek(seat -> {
-                        if (isSeatCurrentlyReserved(seat.getId(), seat.getSchedule().getId(), request.getStartStopId(), request.getEndStopId())) {
-                            throw new SeatUnavailableException(String.format("Seat %s is already reserved/locked.", seat.getSeatNumber()));
-                        }
-                    })
+                    .map(
+                            seatNum ->
+                                    allSeats.stream()
+                                            .filter(s -> s.getSeatNumber().equals(seatNum))
+                                            .findFirst()
+                                            .orElseThrow(
+                                                    () ->
+                                                            new ResourceNotFoundException(
+                                                                    "Seat", "number", seatNum)))
+                    .peek(
+                            seat -> {
+                                if (isSeatCurrentlyReserved(
+                                        seat.getId(),
+                                        seat.getSchedule().getId(),
+                                        request.getStartStopId(),
+                                        request.getEndStopId())) {
+                                    throw new SeatUnavailableException(
+                                            String.format(
+                                                    "Seat %s is already reserved/locked.",
+                                                    seat.getSeatNumber()));
+                                }
+                            })
                     .collect(Collectors.toList());
         }
     }
 
     /**
-     * Checks if the seat is reserved for any overlapping segment in the same schedule.
-     * Uses an optimised native query to fetch only confirmed seat segments and their stop orders.
+     * Checks if the seat is reserved for any overlapping segment in the same schedule. Uses an
+     * optimised native query to fetch only confirmed seat segments and their stop orders.
      */
-    private boolean isSeatCurrentlyReserved(Long seatId, Long scheduleId, Long startStopId, Long endStopId) {
-        Schedule schedule = scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new ResourceNotFoundException("Schedule", "id", scheduleId));
+    private boolean isSeatCurrentlyReserved(
+            Long seatId, Long scheduleId, Long startStopId, Long endStopId) {
+        Schedule schedule =
+                scheduleRepository
+                        .findById(scheduleId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("Schedule", "id", scheduleId));
         List<ScheduleStop> stops = schedule.getStops();
         Map<Long, Integer> stopOrderMap = new HashMap<>();
         for (ScheduleStop ss : stops) {
@@ -238,10 +290,12 @@ public class BookingService {
         Integer reqStartOrder = stopOrderMap.get(startStopId);
         Integer reqEndOrder = stopOrderMap.get(endStopId);
         if (reqStartOrder == null || reqEndOrder == null) {
-            throw new IllegalArgumentException("Start or End stop is not part of the route for this schedule.");
+            throw new IllegalArgumentException(
+                    "Start or End stop is not part of the route for this schedule.");
         }
         // Use optimised native query to fetch only confirmed seat segments and their stop orders
-        List<Object[]> bookedSegments = bookingSeatRepository.findConfirmedBookedSeatSegmentsWithOrders(scheduleId);
+        List<Object[]> bookedSegments =
+                bookingSeatRepository.findConfirmedBookedSeatSegmentsWithOrders(scheduleId);
         for (Object[] seg : bookedSegments) {
             Long bookedSeatId = ((Number) seg[0]).longValue();
             Integer bookedStartOrder = ((Number) seg[1]).intValue();
@@ -256,33 +310,39 @@ public class BookingService {
         return false;
     }
 
-
     /**
      * API: Confirms a PENDING booking after successful payment processing.
+     *
      * @param bookingId The ID of the PENDING booking.
      * @param paymentTransactionId Mock payment reference.
      * @return BookingResponse with CONFIRMED status.
      */
     @Transactional
     public BookingResponse confirmBooking(String bookingId, String paymentTransactionId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+        Booking booking =
+                bookingRepository
+                        .findById(bookingId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("Booking", "id", bookingId));
 
         if (booking.getStatus() != BookingStatus.PENDING) {
-            throw new PaymentFailureException("Booking is not in PENDING state or has already expired/cancelled. Current status: " + booking.getStatus());
+            throw new PaymentFailureException(
+                    "Booking is not in PENDING state or has already expired/cancelled. Current status: "
+                            + booking.getStatus());
         }
-        
+
         // CRITICAL: Check if the booking has already expired just before confirming
         if (booking.getExpirationTime().isBefore(LocalDateTime.now())) {
             // Trigger manual expiration cleanup if missed by the scheduler
             booking.setStatus(BookingStatus.EXPIRED);
             bookingRepository.save(booking);
-            throw new PaymentFailureException("Booking reservation timed out and expired before payment confirmation.");
+            throw new PaymentFailureException(
+                    "Booking reservation timed out and expired before payment confirmation.");
         }
 
         // 1. Simulate successful payment validation (simple check)
         if (paymentTransactionId == null || paymentTransactionId.isBlank()) {
-             throw new PaymentFailureException("Payment failed or transaction ID is missing.");
+            throw new PaymentFailureException("Payment failed or transaction ID is missing.");
         }
 
         // 2. Update Status
@@ -290,9 +350,12 @@ public class BookingService {
         Booking savedBooking = bookingRepository.save(booking);
 
         // 3. Notification (Conceptual: Send event to Notification Service)
-        log.info("Booking ID {} confirmed. Sending confirmation event to Notification Service.", bookingId);
+        log.info(
+                "Booking ID {} confirmed. Sending confirmation event to Notification Service.",
+                bookingId);
 
-        // 4. Release Locks (It is best practice to release Redisson locks early, though they will expire naturally)
+        // 4. Release Locks (It is best practice to release Redisson locks early, though they will
+        // expire naturally)
         releaseLocksForBooking(booking);
 
         return mapToResponse(savedBooking);
@@ -300,21 +363,28 @@ public class BookingService {
 
     /**
      * API: Cancels a CONFIRMED booking and releases seats.
+     *
      * @param bookingId The ID of the booking to cancel.
      * @return BookingResponse with CANCELLED status.
      */
     @Transactional
     public BookingResponse cancelBooking(String bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+        Booking booking =
+                bookingRepository
+                        .findById(bookingId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("Booking", "id", bookingId));
 
-        if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.EXPIRED) {
+        if (booking.getStatus() == BookingStatus.CANCELLED
+                || booking.getStatus() == BookingStatus.EXPIRED) {
             log.warn("Attempt to cancel an already non-active booking: {}", bookingId);
             return mapToResponse(booking);
         }
-        
+
         if (booking.getStatus() != BookingStatus.CONFIRMED) {
-            throw new PaymentFailureException("Only CONFIRMED bookings can be cancelled by the user. Current status: " + booking.getStatus());
+            throw new PaymentFailureException(
+                    "Only CONFIRMED bookings can be cancelled by the user. Current status: "
+                            + booking.getStatus());
         }
 
         // 1. Update Status
@@ -322,35 +392,46 @@ public class BookingService {
         Booking savedBooking = bookingRepository.save(booking);
 
         // 2. Seat Release (Inventory restoration)
-        // In a real system, a message would be sent to the Search/Inventory service to update availability immediately.
+        // In a real system, a message would be sent to the Search/Inventory service to update
+        // availability immediately.
         log.info("Booking ID {} cancelled. Seats released back to inventory.", bookingId);
 
         return mapToResponse(savedBooking);
     }
 
     /**
-     * Releases the distributed Redisson locks associated with a booking.
-     * Called upon successful confirmation to free up the lock key early.
+     * Releases the distributed Redisson locks associated with a booking. Called upon successful
+     * confirmation to free up the lock key early.
      */
     private void releaseLocksForBooking(Booking booking) {
-        String segmentKey = String.format("%s-%s", booking.getStartStop().getId(), booking.getEndStop().getId());
-        booking.getReservedSeats().forEach(bookingSeat -> {
-            String lockKey = String.format("lock:schedule:%d:seat:%d:segment:%s",
-                    booking.getSchedule().getId(), bookingSeat.getSeat().getId(), segmentKey);
-            RLock lock = redissonClient.getLock(lockKey);
+        String segmentKey =
+                String.format(
+                        "%s-%s", booking.getStartStop().getId(), booking.getEndStop().getId());
+        booking.getReservedSeats()
+                .forEach(
+                        bookingSeat -> {
+                            String lockKey =
+                                    String.format(
+                                            "lock:schedule:%d:seat:%d:segment:%s",
+                                            booking.getSchedule().getId(),
+                                            bookingSeat.getSeat().getId(),
+                                            segmentKey);
+                            RLock lock = redissonClient.getLock(lockKey);
 
-            if (lock.isLocked() && lock.isHeldByCurrentThread()) {
-                lock.unlock();
-                log.debug("Lock released for seat {}", bookingSeat.getSeat().getSeatNumber());
-            } else {
-                 log.debug("Lock for seat {} was not held by current thread or was already released.", bookingSeat.getSeat().getSeatNumber());
-            }
-        });
+                            if (lock.isLocked() && lock.isHeldByCurrentThread()) {
+                                lock.unlock();
+                                log.debug(
+                                        "Lock released for seat {}",
+                                        bookingSeat.getSeat().getSeatNumber());
+                            } else {
+                                log.debug(
+                                        "Lock for seat {} was not held by current thread or was already released.",
+                                        bookingSeat.getSeat().getSeatNumber());
+                            }
+                        });
     }
 
-    /**
-     * Maps the JPA entity to the simplified DTO for API responses.
-     */
+    /** Maps the JPA entity to the simplified DTO for API responses. */
     private BookingResponse mapToResponse(Booking booking) {
         BookingResponse response = new BookingResponse();
         response.setBookingId(booking.getId());
@@ -361,13 +442,13 @@ public class BookingService {
         response.setBookingTime(booking.getBookingTime());
         response.setExpirationTime(booking.getExpirationTime());
 
-        response.setReservedSeats(booking.getReservedSeats().stream()
-                .map(bs -> bs.getSeat().getSeatNumber())
-                .collect(Collectors.toList()));
+        response.setReservedSeats(
+                booking.getReservedSeats().stream()
+                        .map(bs -> bs.getSeat().getSeatNumber())
+                        .collect(Collectors.toList()));
 
-        response.setAddons(booking.getAddons().stream()
-                .map(Addon::getName)
-                .collect(Collectors.toList()));
+        response.setAddons(
+                booking.getAddons().stream().map(Addon::getName).collect(Collectors.toList()));
 
         return response;
     }

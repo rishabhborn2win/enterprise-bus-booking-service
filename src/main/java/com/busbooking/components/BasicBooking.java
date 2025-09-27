@@ -2,9 +2,7 @@ package com.busbooking.components;
 
 import java.math.BigDecimal;
 
-/**
- * Decorator Pattern: Concrete Component (Base Price)
- */
+/** Decorator Pattern: Concrete Component (Base Price) */
 public class BasicBooking implements BookingComponent {
     private final BigDecimal basePrice;
 

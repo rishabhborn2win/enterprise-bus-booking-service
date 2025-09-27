@@ -13,8 +13,8 @@ import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 /**
- * Entity linking a specific seat to a specific booked segment within a booking.
- * CRITICAL for multi-hop inventory management.
+ * Entity linking a specific seat to a specific booked segment within a booking. CRITICAL for
+ * multi-hop inventory management.
  */
 @Entity
 @Table(name = "booking_seat")

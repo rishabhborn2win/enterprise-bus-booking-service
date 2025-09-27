@@ -9,10 +9,10 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class ScheduleResponseDto {
-    
+
     @Schema(description = "Newly created Schedule ID.")
     private Long scheduleId;
-    
+
     @Schema(description = "Status of the operation.")
     private String status = "SUCCESS";
 

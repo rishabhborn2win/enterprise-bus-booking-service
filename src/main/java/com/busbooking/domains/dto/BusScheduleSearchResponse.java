@@ -1,7 +1,6 @@
 package com.busbooking.domains.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -21,9 +20,13 @@ public class BusScheduleSearchResponse {
 
     @Schema(description = "Number of seats available for the *requested segment* (A->B).")
     private Integer availableSeatsForSegment;
-    
+
     // Constructor to map from ES Document and availability calculation
-    public BusScheduleSearchResponse(BusScheduleDocument doc, Integer totalCapacity, Integer bookedCount, Integer availableCount) {
+    public BusScheduleSearchResponse(
+            BusScheduleDocument doc,
+            Integer totalCapacity,
+            Integer bookedCount,
+            Integer availableCount) {
         this.scheduleDetails = doc;
         this.totalCapacity = totalCapacity;
         this.bookedSeatsForSegment = bookedCount;

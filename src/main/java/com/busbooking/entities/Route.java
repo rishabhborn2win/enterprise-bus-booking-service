@@ -15,10 +15,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-/**
- * Entity defining a logical route between two main stops.
- * Maps to the ROUTE table.
- */
+/** Entity defining a logical route between two main stops. Maps to the ROUTE table. */
 @Entity
 @Table(name = "route")
 @Data

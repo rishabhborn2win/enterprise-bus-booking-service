@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,11 +17,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import java.time.LocalDateTime;
-
 /**
- * Defines an intermediate or terminal stop for a specific schedule.
- * CRITICAL for Multi-hop logic.
+ * Defines an intermediate or terminal stop for a specific schedule. CRITICAL for Multi-hop logic.
  * Maps to the SCHEDULE_STOP table.
  */
 @Entity
@@ -30,7 +28,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-
 public class ScheduleStop {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -11,10 +11,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-/**
- * Entity for a geographical stop/city.
- * Maps to the STOP table.
- */
+
+/** Entity for a geographical stop/city. Maps to the STOP table. */
 @Entity
 @Table(name = "stop")
 @Data

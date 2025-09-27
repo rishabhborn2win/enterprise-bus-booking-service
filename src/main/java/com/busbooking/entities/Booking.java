@@ -2,20 +2,19 @@ package com.busbooking.entities;
 
 import com.busbooking.enums.BookingStatus;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.hibernate.annotations.GenericGenerator;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
-
 /**
- * JPA Entity representing a single booking transaction.
- * Tracks the booking state, price, and the specific segment of the schedule booked.
+ * JPA Entity representing a single booking transaction. Tracks the booking state, price, and the
+ * specific segment of the schedule booked.
  */
 @Entity
 @Table(name = "booking")
@@ -61,15 +60,18 @@ public class Booking {
     private LocalDateTime expirationTime;
 
     /** Multi-hop support: One booking can reserve multiple segments of seats */
-    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(
+            mappedBy = "booking",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY)
     private Set<BookingSeat> reservedSeats = new HashSet<>();
 
     /** Decorator Pattern: Booking addons (extra luggage, meal, etc.) */
     @ManyToMany
     @JoinTable(
-        name = "booking_addon",
-        joinColumns = @JoinColumn(name = "booking_id"),
-        inverseJoinColumns = @JoinColumn(name = "addon_id")
-    )
+            name = "booking_addon",
+            joinColumns = @JoinColumn(name = "booking_id"),
+            inverseJoinColumns = @JoinColumn(name = "addon_id"))
     private Set<Addon> addons = new HashSet<>();
 }
