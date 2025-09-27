@@ -42,8 +42,17 @@ spring:
   elasticsearch:
     client:
       cloud:
-        id: 3eba915db9ca4d72b2943da2da64bb09
+        id: 4c722c35bf4d4e6d93c82ebbe227fa50:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyQzZWJhOTE1ZGI5Y2E0ZDcyYjI5NDNkYTJkYTY0YmIwOSQyNzgzYzFjNGZmNzU0MTM3YWNmMmIyODBhMjM2ODk2NQ==
       api-key: UHN5M2laa0JYYnNWSHBMQllYaHo6RkdLcjRKdXNYN3BfX3dKZ3cwUmdKQQ==
+      protocol: https
+    connection-timeout: 10s
+    rest:
+      uris: https://3eba915db9ca4d72b2943da2da64bb09.us-central1.gcp.cloud.es.io:443
+
+es:
+  cloud.id: 4c722c35bf4d4e6d93c82ebbe227fa50:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyQzZWJhOTE1ZGI5Y2E0ZDcyYjI5NDNkYTJkYTY0YmIwOSQyNzgzYzFjNGZmNzU0MTM3YWNmMmIyODBhMjM2ODk2NQ==
+  api-key: UHN5M2laa0JYYnNWSHBMQllYaHo6RkdLcjRKdXNYN3BfX3dKZ3cwUmdKQQ==
+
 
   # -----------------------------------------------------------------
   # 4. Global Logging Configuration
@@ -54,6 +63,13 @@ logging:
     com.busbooking: DEBUG # DEBUG logs for our custom application code
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG # Shows all executed SQL statements
+    org:
+      springframework:
+        data:
+          elasticsearch: DEBUG # DEBUG logs for Elasticsearch operations
+      elasticsearch:
+        client:
+          RestClient: TRACE
 
 # -----------------------------------------------------------------
 # 5. OpenAPI/Swagger UI Configuration

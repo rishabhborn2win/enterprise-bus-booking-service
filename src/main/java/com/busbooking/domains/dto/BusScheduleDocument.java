@@ -33,7 +33,7 @@ public class BusScheduleDocument {
     @Data public static class ScheduleStopDetail {
         private Long stopId;
         private String stopName;
-        private LocalDateTime arrivalTime;
+        private Long arrivalTime;
         private Integer stopOrder;
     }
 }

@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Service
@@ -41,7 +42,7 @@ public class SyncService {
                 BusScheduleDocument.ScheduleStopDetail detail = new BusScheduleDocument.ScheduleStopDetail();
                 detail.setStopId(ss.getStop().getId());
                 detail.setStopName(ss.getStop().getName());
-                detail.setArrivalTime(ss.getArrivalTime());
+                detail.setArrivalTime(ss.getArrivalTime().toEpochSecond(ZoneOffset.UTC));
                 detail.setStopOrder(ss.getStopOrder());
                 return detail;
             }).toList();

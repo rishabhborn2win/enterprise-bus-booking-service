@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.4</version> <!-- Using stable 3.x version -->
+        <version>3.3.4</version> <!-- Using stable 3.x version -->
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
@@ -19,6 +19,8 @@
     <properties>
         <java.version>17</java.version>
         <redisson.version>3.27.1</redisson.version>
+        <spring-data-elasticsearch.version>5.2.4</spring-data-elasticsearch.version>
+        <elasticsearch-java.version>8.12.0</elasticsearch-java.version>
     </properties>
 
     <dependencies>
@@ -68,6 +70,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
+            <version>${elasticsearch-client.version}</version>
         </dependency>
 
         <!-- API Documentation: OpenAPI 3.0 & Swagger UI -->
