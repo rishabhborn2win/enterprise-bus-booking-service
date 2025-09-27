@@ -17,7 +17,7 @@ import java.util.List;
 @Slf4j
 public class SyncService {
     private final ScheduleRepository scheduleRepository;
-//    private final BusScheduleElasticRepository elasticRepository;
+    private final BusScheduleElasticRepository elasticRepository;
 
     @Transactional(readOnly = true)
     public BusScheduleDocument mapToDocument(Schedule schedule) {
@@ -57,7 +57,7 @@ public class SyncService {
             .orElseThrow(() -> new EntityNotFoundException("Schedule not found for sync."));
         
         BusScheduleDocument document = mapToDocument(schedule);
-//        elasticRepository.save(document);
+        elasticRepository.save(document);
     }
 
     /**
@@ -80,7 +80,7 @@ public class SyncService {
 
         // 3. Save all to Elasticsearch in bulk
         if (!documents.isEmpty()) {
-//            elasticRepository.saveAll(documents);
+            elasticRepository.saveAll(documents);
             log.info("Full sync completed successfully. {} schedules indexed into Elasticsearch.", documents.size());
         } else {
             log.warn("Full sync completed. No schedules found in MySQL to index.");
@@ -92,7 +92,7 @@ public class SyncService {
      */
     public void deleteScheduleFromElasticsearch(Long scheduleId) {
         // The scheduleId is the document's ID in Elasticsearch
-//        elasticRepository.deleteById(scheduleId);
+        elasticRepository.deleteById(scheduleId);
         log.info("Schedule ID {} successfully deleted from Elasticsearch index.", scheduleId);
     }
 }

@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 
 @Repository
-public interface BusScheduleElasticRepository {
+public interface BusScheduleElasticRepository extends ElasticsearchRepository<BusScheduleDocument, Long>{
     Page<BusScheduleDocument> findBySourceStopIdAndDestinationStopIdAndDepartureTimeBetween(
         Long sourceStopId, 
         Long destinationStopId, 

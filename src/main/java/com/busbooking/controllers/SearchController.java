@@ -32,7 +32,7 @@ import java.time.LocalTime;
 @Tag(name = "Bus Search & Availability", description = "High-speed endpoints for finding schedules and checking segment-based seat availability.")
 public class SearchController {
 
-//    private final BusScheduleElasticRepository elasticRepository;
+    private final BusScheduleElasticRepository elasticRepository;
     private final SeatAvailabilityService availabilityService;
 
     @Operation(summary = "Search Available Schedules", description = "Queries Elasticsearch for matching schedules and calculates segment-based available seats in real-time from MySQL.")
@@ -52,10 +52,10 @@ public class SearchController {
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
 
         // 1. Elasticsearch Search
-        Page<BusScheduleDocument> documentsPage = null;
-//                elasticRepository.findBySourceStopIdAndDestinationStopIdAndDepartureTimeBetween(
-//            sourceStopId, destinationStopId, startOfDay, endOfDay, pageable
-//        );
+        Page<BusScheduleDocument> documentsPage =
+                elasticRepository.findBySourceStopIdAndDestinationStopIdAndDepartureTimeBetween(
+            sourceStopId, destinationStopId, startOfDay, endOfDay, pageable
+        );
 
         // 2. Segment-based Availability Check (Mapping)
         Page<BusScheduleSearchResponse> responsePage = documentsPage.map(doc -> {

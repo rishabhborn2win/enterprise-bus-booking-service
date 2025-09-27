@@ -1,5 +1,6 @@
 package com.busbooking.domains.dto;
 
+import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import lombok.Data;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
